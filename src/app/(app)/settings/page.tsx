@@ -294,8 +294,8 @@ export default function SettingsPage() {
               Tasks are never sent to our servers.
             </p>
             <p>
-              When you use the Scan Notice feature, your uploaded documents are sent to
-              Google Gemini AI for processing. Documents are not stored after processing.
+              When you use the Scan Notice feature, your uploaded documents are processed
+              securely using AI to extract deadlines. Documents are never stored after processing.
             </p>
           </div>
         </motion.section>

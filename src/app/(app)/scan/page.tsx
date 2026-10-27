@@ -13,6 +13,7 @@ import { TextPasteModal } from "@/components/scanner/TextPasteModal";
 import { useToast } from "@/components/ui/Toast";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { optimizeImageForScan } from "@/lib/imageOptimizer";
 
 type ScanState = "upload" | "scanning" | "results" | "error";
 
@@ -44,18 +45,19 @@ export default function ScanPage() {
 
     try {
       setScanProgress(20);
-      setScanStatus("Uploading to AI...");
+      setScanStatus("Preparing document...");
 
       const formData = new FormData();
       if (file) {
-        formData.append("file", file);
+        const optimizedFile = await optimizeImageForScan(file);
+        formData.append("file", optimizedFile);
         formData.append("filename", file.name);
       } else if (text) {
         formData.append("text", text);
       }
 
       setScanProgress(40);
-      setScanStatus("Analyzing document...");
+      setScanStatus("Analyzing with AI...");
 
       const response = await fetch("/api/scan", {
         method: "POST",
@@ -219,7 +221,7 @@ export default function ScanPage() {
                 onTextPaste={() => setIsTextModalOpen(true)}
               />
               <p className="text-micro text-muted text-center mt-4">
-                Your document will be sent to Google Gemini AI for processing.
+                Your document will be processed securely using AI.
               </p>
             </motion.div>
           )}

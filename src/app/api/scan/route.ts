@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const API_KEY = process.env.GEMINI_API_KEY;
+const PREFERRED_MODEL = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -13,60 +13,112 @@ const ALLOWED_TYPES = [
   "image/webp",
 ];
 
-const EXTRACTION_PROMPT = `You are an expert at extracting academic deadlines and tasks from college notices, syllabi, and announcements.
+const EXTRACTION_PROMPT = `You are an expert at extracting academic deadlines and tasks from college notices, syllabi, announcements, and screenshots.
 
-Analyze the provided document and extract ALL tasks, assignments, exams, quizzes, projects, presentations, registration deadlines, payment deadlines, and other academic obligations.
+Extract ALL assignments, exams, quizzes, projects, presentations, registration deadlines, payment deadlines, and academic tasks.
 
-CRITICAL DATE RULES:
-- Extract dates EXACTLY as stated in the document
-- NEVER invent, guess, or assume dates
-- If a year is not specified, DO NOT add one - leave it ambiguous
-- If a date is unclear or could have multiple interpretations, mark needsReview: true
-- Publication/issue dates are NOT due dates
-- "Submit by", "due on", "deadline", "last date" indicate due dates
-- If no specific date exists, set dueDate to null
+CRITICAL RULES:
+- Extract dates EXACTLY as stated.
+- NEVER invent or guess dates.
+- If a year is not specified, do NOT add one - leave it ambiguous.
+- If a date is unclear, mark needsReview: true.
+- Publication/issue/notice dates are NOT due dates.
+- If no specific due date exists, set dueDate to null.
 
-For each task found, extract:
-- title: Clear, concise task name
-- subject: Course code/name if mentioned, otherwise "General"
-- type: One of: assignment, exam, quiz, project, presentation, registration, payment, reading, other
-- dueDate: ISO date string (YYYY-MM-DD) or null if not specified/unclear
-- dueTime: Time in HH:MM format if specified, otherwise omit
-- description: Brief instructions or details if provided
-- sourceExcerpt: The exact text from the document that mentions this task (max 200 chars)
-- confidence: "high" if date and task are clearly stated, "medium" if somewhat ambiguous, "low" if very uncertain
-- needsReview: true if date is ambiguous, year is missing, or information conflicts
-- reviewReason: If needsReview is true, explain why (e.g., "Year not specified", "Multiple possible dates")
-
-Respond with a JSON object:
+Return JSON in this format:
 {
   "tasks": [
     {
-      "title": "string",
-      "subject": "string",
-      "type": "string",
-      "dueDate": "YYYY-MM-DD" | null,
-      "dueTime": "HH:MM" | undefined,
-      "description": "string" | undefined,
-      "sourceExcerpt": "string",
+      "title": "Clear task name",
+      "subject": "Course code or subject if mentioned, otherwise General",
+      "type": "assignment" | "exam" | "quiz" | "project" | "presentation" | "registration" | "payment" | "reading" | "other",
+      "dueDate": "YYYY-MM-DD" or null,
+      "dueTime": "HH:MM" or null,
+      "description": "Brief description if available",
+      "sourceExcerpt": "Exact text from document (max 200 chars)",
       "confidence": "high" | "medium" | "low",
       "needsReview": boolean,
-      "reviewReason": "string" | undefined
+      "reviewReason": "Reason if needsReview is true"
     }
   ],
-  "documentSummary": "Brief summary of what this document is about"
+  "documentSummary": "Brief 1-sentence summary of document"
 }
 
-If no tasks are found, return {"tasks": [], "documentSummary": "..."}
-Only return valid JSON, no markdown code blocks.`;
+If no tasks are found, return {"tasks": [], "documentSummary": "..."}`;
+
+// Candidate models in order of priority and speed
+const FALLBACK_MODELS = [
+  PREFERRED_MODEL,
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+];
+
+const SAFETY_SETTINGS = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+];
+
+async function generateWithFallback(
+  genAI: GoogleGenerativeAI,
+  contentParts: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }>
+) {
+  // Deduplicate candidate models
+  const uniqueModels = Array.from(new Set(FALLBACK_MODELS.filter(Boolean)));
+  let lastError: unknown = null;
+
+  for (const modelName of uniqueModels) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.1,
+          maxOutputTokens: 2048,
+        },
+        safetySettings: SAFETY_SETTINGS,
+      });
+
+      // Timeout of 18 seconds per attempt so hanging models do not freeze the UI
+      const result = await Promise.race([
+        model.generateContent(contentParts),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Model ${modelName} timed out`)), 18000)
+        ),
+      ]);
+
+      return result.response.text();
+    } catch (err) {
+      console.warn(`Model ${modelName} attempt failed, trying fallback:`, (err as Error)?.message || err);
+      lastError = err;
+    }
+  }
+
+  throw lastError;
+}
 
 export async function POST(request: NextRequest) {
-  if (!GEMINI_API_KEY) {
+  if (!API_KEY) {
     return NextResponse.json(
       {
         success: false,
-        error: "AI scanning is not configured. Please add GEMINI_API_KEY to use this feature.",
-        tasks: []
+        error: "AI scanning is not configured. Please add an API key to use this feature.",
+        tasks: [],
       },
       { status: 503 }
     );
@@ -129,42 +181,18 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL,
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_NONE,
-        },
-      ],
-    });
-
-    const result = await model.generateContent(contentParts);
-    const response = result.response;
-    const responseText = response.text();
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const responseText = await generateWithFallback(genAI, contentParts);
 
     let parsed;
     try {
       const cleanedText = responseText
-        .replace(/```json\n?/g, "")
+        .replace(/```json\n?/gi, "")
         .replace(/```\n?/g, "")
         .trim();
       parsed = JSON.parse(cleanedText);
     } catch {
-      console.error("Failed to parse Gemini response:", responseText);
+      console.error("Failed to parse AI response:", responseText);
       return NextResponse.json(
         { success: false, error: "Failed to parse AI response. Please try again." },
         { status: 500 }
@@ -181,27 +209,33 @@ export async function POST(request: NextRequest) {
     const validTypes = ["assignment", "exam", "quiz", "project", "presentation", "registration", "payment", "reading", "other"];
 
     const tasks = parsed.tasks.map((task: Record<string, unknown>, index: number) => {
-      const type = validTypes.includes(task.type as string) ? task.type : "other";
+      const rawType = String(task.type || "other").toLowerCase();
+      const type = validTypes.includes(rawType) ? rawType : "other";
 
       let needsReview = Boolean(task.needsReview);
       let reviewReason = task.reviewReason as string | undefined;
 
-      if (task.dueDate && typeof task.dueDate === "string") {
-        if (!task.dueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      let dueDate = (task.dueDate || task.due_date) as string | null;
+      if (dueDate && typeof dueDate === "string") {
+        if (!dueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
           needsReview = true;
           reviewReason = reviewReason || "Date format unclear";
         }
+      } else {
+        dueDate = null;
       }
+
+      const dueTime = (task.dueTime || task.due_time) as string | undefined;
 
       return {
         id: `extracted-${Date.now()}-${index}`,
-        title: String(task.title || "Untitled Task"),
+        title: String(task.title || task.task || "Untitled Task"),
         subject: String(task.subject || "General"),
         type,
-        dueDate: task.dueDate || null,
-        dueTime: task.dueTime || undefined,
-        description: task.description || undefined,
-        sourceExcerpt: String(task.sourceExcerpt || "").slice(0, 200),
+        dueDate,
+        dueTime: dueTime || undefined,
+        description: (task.description as string) || undefined,
+        sourceExcerpt: String(task.sourceExcerpt || task.excerpt || "").slice(0, 200),
         sourceFilename,
         confidence: ["high", "medium", "low"].includes(task.confidence as string)
           ? task.confidence
@@ -221,7 +255,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Scan error:", error);
-    console.error("Full error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
     const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -234,7 +267,7 @@ export async function POST(request: NextRequest) {
 
     if (errorMessage.includes("503") || errorMessage.includes("high demand")) {
       return NextResponse.json(
-        { success: false, error: "AI service is temporarily overloaded. Please try again in a few moments." },
+        { success: false, error: "AI service is temporarily experiencing high demand. Please try again shortly." },
         { status: 503 }
       );
     }

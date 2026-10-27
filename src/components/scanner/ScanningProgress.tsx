@@ -71,7 +71,7 @@ export function ScanningProgress({ progress, status }: ScanningProgressProps) {
           {status}
         </h3>
         <p className="text-body-sm text-muted">
-          Processing with Google Gemini AI
+          Analyzing document with AI
         </p>
       </motion.div>
 

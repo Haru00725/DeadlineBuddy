@@ -15,6 +15,9 @@
 
   html {
     scroll-behavior: smooth;
+    /* Prevent rubber-band effect interfering with bottom sheet navigation */
+    overscroll-behavior-y: none;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -22,6 +25,25 @@
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+  }
+
+  /* Critical iOS Safari optimization: inputs must be >= 16px to prevent automatic zooming */
+  @media screen and (max-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Touch buttons response speed without delay */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
   }
 
   ::selection {
@@ -34,8 +56,30 @@
 }
 
 @layer components {
+  /* Safe Area insets for iPhone notch/dynamic island and Android gesture bar */
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 8px);
+  }
+
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+  }
+
+  .pl-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
+  .pr-safe {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .min-h-screen-safe {
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Momentum smooth scrolling on iOS */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
   }
 
   .scrollbar-hide {

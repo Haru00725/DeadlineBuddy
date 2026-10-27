@@ -1,6 +1,7 @@
 "use client";
 
 import { Task, SerializedTask } from "./types";
+import { ensureDate } from "./utils";
 
 const STORAGE_KEY = "deadlinebuddy_tasks";
 const STORAGE_VERSION = "1";
@@ -8,17 +9,17 @@ const STORAGE_VERSION = "1";
 export function serializeTask(task: Task): SerializedTask {
   return {
     ...task,
-    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-    createdAt: task.createdAt.toISOString(),
-    completedAt: task.completedAt ? task.completedAt.toISOString() : undefined,
+    dueDate: task.dueDate ? (task.dueDate instanceof Date ? task.dueDate.toISOString() : String(task.dueDate)) : null,
+    createdAt: task.createdAt instanceof Date ? task.createdAt.toISOString() : new Date().toISOString(),
+    completedAt: task.completedAt ? (task.completedAt instanceof Date ? task.completedAt.toISOString() : String(task.completedAt)) : undefined,
   };
 }
 
 export function deserializeTask(data: SerializedTask): Task {
   return {
     ...data,
-    dueDate: data.dueDate ? new Date(data.dueDate) : null,
-    createdAt: new Date(data.createdAt),
+    dueDate: ensureDate(data.dueDate),
+    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
     completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
   };
 }

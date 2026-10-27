@@ -50,15 +50,16 @@ export function TaskDetails({
                 ? { duration: 0 }
                 : { type: "spring", stiffness: 400, damping: 40 }
             }
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-surface border-l border-border z-50 overflow-y-auto"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-surface border-l border-border z-50 overflow-y-auto scroll-touch pb-safe"
           >
-            <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-surface/95 backdrop-blur-md border-b border-border px-6 py-4 flex items-center justify-between pt-safe z-10">
               <h2 className="font-display font-semibold text-heading text-graphite">
                 Task Details
               </h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg text-muted hover:text-graphite hover:bg-black/5 transition-colors"
+                className="p-2 rounded-lg text-muted hover:text-graphite hover:bg-black/5 active:scale-90 transition-all"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>

@@ -9,6 +9,7 @@ import { Textarea } from "../ui/Textarea";
 import { Button } from "../ui/Button";
 import { ExtractedTask, TaskType } from "@/lib/types";
 import { taskTypes } from "@/lib/data";
+import { ensureDate } from "@/lib/utils";
 
 interface EditExtractedTaskModalProps {
   task: ExtractedTask | null;
@@ -35,7 +36,8 @@ export function EditExtractedTaskModal({
       setTitle(task.title);
       setSubject(task.subject);
       setType(task.type);
-      setDueDate(task.dueDate ? format(task.dueDate, "yyyy-MM-dd") : "");
+      const parsed = ensureDate(task.dueDate);
+      setDueDate(parsed ? format(parsed, "yyyy-MM-dd") : "");
       setDueTime(task.dueTime || "");
       setDescription(task.description || "");
     }
@@ -48,7 +50,7 @@ export function EditExtractedTaskModal({
       title: title.trim(),
       subject: subject.trim() || "General",
       type,
-      dueDate: dueDate ? new Date(dueDate + "T23:59:59") : null,
+      dueDate: dueDate ? ensureDate(dueDate) : null,
       dueTime: dueTime || undefined,
       description: description.trim() || undefined,
       needsReview: false,

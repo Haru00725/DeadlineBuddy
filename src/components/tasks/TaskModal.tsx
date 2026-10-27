@@ -9,15 +9,23 @@ import { Textarea } from "../ui/Textarea";
 import { Button } from "../ui/Button";
 import { Task, TaskType, Priority } from "@/lib/types";
 import { subjects, taskTypes, priorities } from "@/lib/data";
+import { ensureDate } from "@/lib/utils";
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: Omit<Task, "id" | "createdAt" | "status" | "completedAt">) => void;
   editingTask?: Task | null;
+  prefilledDate?: Date | null;
 }
 
-export function TaskModal({ isOpen, onClose, onSave, editingTask }: TaskModalProps) {
+export function TaskModal({
+  isOpen,
+  onClose,
+  onSave,
+  editingTask,
+  prefilledDate,
+}: TaskModalProps) {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState(subjects[0]);
   const [type, setType] = useState<TaskType>("assignment");
@@ -33,7 +41,8 @@ export function TaskModal({ isOpen, onClose, onSave, editingTask }: TaskModalPro
       setSubject(editingTask.subject);
       setType(editingTask.type);
       setPriority(editingTask.priority);
-      setDueDate(editingTask.dueDate ? format(editingTask.dueDate, "yyyy-MM-dd") : "");
+      const parsed = ensureDate(editingTask.dueDate);
+      setDueDate(parsed ? format(parsed, "yyyy-MM-dd") : "");
       setDueTime(editingTask.dueTime || "");
       setDescription(editingTask.description || "");
     } else {
@@ -41,12 +50,12 @@ export function TaskModal({ isOpen, onClose, onSave, editingTask }: TaskModalPro
       setSubject(subjects[0]);
       setType("assignment");
       setPriority("medium");
-      setDueDate("");
+      setDueDate(prefilledDate ? format(prefilledDate, "yyyy-MM-dd") : "");
       setDueTime("");
       setDescription("");
     }
     setErrors({});
-  }, [editingTask, isOpen]);
+  }, [editingTask, isOpen, prefilledDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +68,7 @@ export function TaskModal({ isOpen, onClose, onSave, editingTask }: TaskModalPro
       return;
     }
 
-    const dueDateObj = dueDate ? new Date(dueDate + "T23:59:59") : null;
+    const dueDateObj = dueDate ? ensureDate(dueDate) : null;
 
     onSave({
       title: title.trim(),

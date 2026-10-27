@@ -53,7 +53,7 @@ export function Modal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <motion.div
             initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -80,25 +80,28 @@ export function Modal({
                 : { type: "spring", stiffness: 400, damping: 30 }
             }
             className={cn(
-              "relative w-full bg-surface rounded-2xl shadow-modal overflow-hidden",
+              "relative w-full max-h-[92dvh] flex flex-col bg-surface rounded-2xl shadow-modal overflow-hidden",
               sizes[size],
               className
             )}
           >
             {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-border bg-surface">
                 <h2 className="text-heading font-display font-semibold text-graphite">
                   {title}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-lg text-muted hover:text-graphite hover:bg-black/5 transition-colors"
+                  className="p-1.5 rounded-lg text-muted hover:text-graphite hover:bg-black/5 active:scale-90 transition-all"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             )}
-            {children}
+            <div className="overflow-y-auto scroll-touch flex-1">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

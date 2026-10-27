@@ -33,7 +33,7 @@ export function MobileNav({ onNewTask }: MobileNavProps) {
       initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={reducedMotion ? { duration: 0 } : { duration: 0.3, delay: 0.2 }}
-      className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50 pb-safe"
+      className="fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-md border-t border-border z-50 pb-safe"
     >
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.slice(0, 2).map((item) => {
@@ -45,8 +45,8 @@ export function MobileNav({ onNewTask }: MobileNavProps) {
               key={item.id}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 w-16 h-full transition-colors",
-                isActive ? "text-graphite" : "text-muted"
+                "flex flex-col items-center justify-center gap-0.5 w-16 h-full active:scale-95 transition-all",
+                isActive ? "text-graphite font-semibold" : "text-muted"
               )}
             >
               <div className="relative">
@@ -72,7 +72,8 @@ export function MobileNav({ onNewTask }: MobileNavProps) {
 
         <button
           onClick={onNewTask}
-          className="flex items-center justify-center w-14 h-14 -mt-6 bg-lime rounded-2xl shadow-elevated"
+          aria-label="Create New Task"
+          className="flex items-center justify-center w-14 h-14 -mt-6 bg-lime rounded-2xl shadow-elevated active:scale-90 transition-transform"
         >
           <Plus className="w-6 h-6 text-graphite" />
         </button>
@@ -86,8 +87,8 @@ export function MobileNav({ onNewTask }: MobileNavProps) {
               key={item.id}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 w-16 h-full transition-colors",
-                isActive ? "text-graphite" : "text-muted"
+                "flex flex-col items-center justify-center gap-0.5 w-16 h-full active:scale-95 transition-all",
+                isActive ? "text-graphite font-semibold" : "text-muted"
               )}
             >
               <div className="relative">

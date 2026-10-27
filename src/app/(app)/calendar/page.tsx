@@ -102,7 +102,7 @@ export default function CalendarPage() {
           tasks={tasks}
           onTaskClick={handleTaskClick}
           onDateClick={handleDateClick}
-          onNewTask={() => handleNewTask()}
+          onNewTask={(date) => handleNewTask(date)}
         />
       </motion.div>
 
@@ -114,6 +114,7 @@ export default function CalendarPage() {
         }}
         onSave={handleSaveTask}
         editingTask={editingTask}
+        prefilledDate={prefilledDate}
       />
 
       <TaskDetails

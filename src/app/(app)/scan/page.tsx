@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScanLine, ArrowLeft, AlertCircle } from "lucide-react";
 import { useTaskStore } from "@/lib/store";
 import { ExtractedTask, Task } from "@/lib/types";
-import { generateId } from "@/lib/utils";
+import { generateId, ensureDate } from "@/lib/utils";
 import { UploadArea } from "@/components/scanner/UploadArea";
 import { ScanningProgress } from "@/components/scanner/ScanningProgress";
 import { ExtractionResults } from "@/components/scanner/ExtractionResults";
@@ -83,7 +83,7 @@ export default function ScanPage() {
       const tasks: ExtractedTask[] = (data.tasks || []).map((t: ExtractedTask) => ({
         ...t,
         id: t.id || generateId(),
-        dueDate: t.dueDate ? new Date(t.dueDate) : null,
+        dueDate: ensureDate(t.dueDate),
       }));
 
       setScanProgress(100);

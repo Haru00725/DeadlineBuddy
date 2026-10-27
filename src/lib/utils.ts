@@ -6,18 +6,48 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function formatDueDate(date: Date | null): string {
-  if (!date) return "No date";
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  if (isYesterday(date)) return "Yesterday";
+export function ensureDate(date: Date | string | null | undefined): Date | null {
+  if (!date) return null;
+  if (date instanceof Date) return isNaN(date.getTime()) ? null : date;
+  if (typeof date === "string") {
+    // If it's a simple YYYY-MM-DD string, construct local date to avoid UTC midnight drift
+    const ymd = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymd) {
+      return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 23, 59, 59);
+    }
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
 
-  const daysFromNow = differenceInDays(date, new Date());
+export function getTaskDateKey(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  if (typeof date === "string") {
+    const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? null : format(d, "yyyy-MM-dd");
+  }
+  if (date instanceof Date) {
+    return isNaN(date.getTime()) ? null : format(date, "yyyy-MM-dd");
+  }
+  return null;
+}
+
+export function formatDueDate(date: Date | string | null): string {
+  const d = ensureDate(date);
+  if (!d) return "No date";
+  if (isToday(d)) return "Today";
+  if (isTomorrow(d)) return "Tomorrow";
+  if (isYesterday(d)) return "Yesterday";
+
+  const daysFromNow = differenceInDays(d, new Date());
   if (daysFromNow > 0 && daysFromNow <= 6) {
-    return format(date, "EEEE");
+    return format(d, "EEEE");
   }
 
-  return format(date, "MMM d");
+  return format(d, "MMM d");
 }
 
 export function formatDateTime(date: Date | null, time?: string): string {
@@ -29,14 +59,16 @@ export function formatDateTime(date: Date | null, time?: string): string {
   return dateStr;
 }
 
-export function formatFullDate(date: Date | null): string {
-  if (!date) return "No date specified";
-  return format(date, "EEEE, MMMM d, yyyy");
+export function formatFullDate(date: Date | string | null): string {
+  const d = ensureDate(date);
+  if (!d) return "No date specified";
+  return format(d, "EEEE, MMMM d, yyyy");
 }
 
-export function formatShortDate(date: Date | null): string {
-  if (!date) return "No date";
-  return format(date, "MMM d");
+export function formatShortDate(date: Date | string | null): string {
+  const d = ensureDate(date);
+  if (!d) return "No date";
+  return format(d, "MMM d");
 }
 
 export function formatTime(date: Date): string {

@@ -40,6 +40,12 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "DeadlineBuddy",
   },
+  formatDetection: {
+    telephone: false,
+    date: false,
+    email: false,
+    address: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -47,7 +53,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
-  themeColor: "#111318",
+  themeColor: "#F7F7F0",
 };
 
 export default function RootLayout({

@@ -70,7 +70,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
       {isMobile ? (
         <>
           <MobileHeader />
-          <main className="pb-20">{children}</main>
+          <main className="pb-28">{children}</main>
           <MobileNav onNewTask={handleNewTask} />
         </>
       ) : (
